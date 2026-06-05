@@ -1,0 +1,13 @@
+{
+  "itemGroup.ravenhud": "Example Mod Tab",
+  "block.ravenhud.example_block": "Example Block",
+  "item.ravenhud.example_item": "Example Item",
+
+  "ravenhud.configuration.title": "RavenHUD Configs",
+  "ravenhud.configuration.section.ravenhud.common.toml": "RavenHUD Configs",
+  "ravenhud.configuration.section.ravenhud.common.toml.title": "RavenHUD Configs",
+  "ravenhud.configuration.items": "Item List",
+  "ravenhud.configuration.logDirtBlock": "Log Dirt Block",
+  "ravenhud.configuration.magicNumberIntroduction": "Magic Number Text",
+  "ravenhud.configuration.magicNumber": "Magic Number"
+}
