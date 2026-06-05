@@ -1263,6 +1263,9 @@ public class RavenHUDOverlay {
 
     private void drawArch(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
                           double radius, double thick, double startAngle, double endAngle) {
+        if (Math.abs(endAngle - startAngle) < 0.001) {
+            return;
+        }
         double rad = Math.PI / 180.0;
         double start = startAngle * rad;
         double end = endAngle * rad;
@@ -1315,6 +1318,9 @@ public class RavenHUDOverlay {
 
     private void drawArchLine(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
                               double radius, double startAngle, double endAngle) {
+        if (Math.abs(endAngle - startAngle) < 0.001) {
+            return;
+        }
         double rad = Math.PI / 180.0;
         double start = startAngle * rad;
         double end = endAngle * rad;
