@@ -66,17 +66,65 @@ public class RavenHUDOverlay {
         double midX = width / 2.0;
         double midY = height / 2.0;
 
-        // カラー値のパースと不変レコード化
-        HudColors colors = new HudColors(
-                parseColor(Config.COLOR_NORMAL.get(), 0xC7FFAE00),
-                parseColor(Config.COLOR_WARNING.get(), 0xE5FFFF00),
-                parseColor(Config.COLOR_ALERT.get(), 0xE5FF0000),
-                parseColor(Config.COLOR_NUMBER.get(), 0xCCD09000),
-                parseColor(Config.COLOR_IRON.get(), 0x807050),
-                parseColor(Config.COLOR_GOLD.get(), 0x999000),
-                parseColor(Config.COLOR_DIAMOND.get(), 0x009999),
-                parseColor(Config.COLOR_LAVA.get(), 0xFF3000)
-        );
+        // カラー値のパースと不変レコード化 (プリセット考慮)
+        Config.ColorPreset preset = Config.COLOR_PRESET.get();
+        HudColors colors;
+        if (preset == Config.ColorPreset.CUSTOM) {
+            colors = new HudColors(
+                    parseColor(Config.COLOR_NORMAL.get(), 0xC7FFAE00),
+                    parseColor(Config.COLOR_WARNING.get(), 0xE5FFFF00),
+                    parseColor(Config.COLOR_ALERT.get(), 0xE5FF0000),
+                    parseColor(Config.COLOR_NUMBER.get(), 0xCCD09000),
+                    parseColor(Config.COLOR_IRON.get(), 0x807050),
+                    parseColor(Config.COLOR_GOLD.get(), 0x999000),
+                    parseColor(Config.COLOR_DIAMOND.get(), 0x009999),
+                    parseColor(Config.COLOR_LAVA.get(), 0xFF3000)
+            );
+        } else {
+            colors = switch (preset) {
+                case RAVEN -> new HudColors(
+                        0xC7FFAE00, // normal
+                        0xE5FFFF00, // warning
+                        0xE5FF0000, // alert
+                        0xCCD09000, // number
+                        0x807050,   // iron
+                        0x999000,   // gold
+                        0x009999,   // diamond
+                        0xFF3000    // lava
+                );
+                case TYPE_B -> new HudColors(
+                        0xCC00FFD8, // normal
+                        0xE5FFFF00,
+                        0xE5FF0000,
+                        0xCC00FFD8,
+                        0x807050,
+                        0x999000,
+                        0x009999,
+                        0xFF3000
+                );
+                case ACV -> new HudColors(
+                        0xCC60FFC4, // normal (エメラルドグリーン)
+                        0xE5FFFF00,
+                        0xE5FF0000,
+                        0xCC00FFD8, // number (水色)
+                        0x807050,
+                        0x999000,
+                        0x009999,
+                        0xFF3000
+                );
+                case AC6 -> new HudColors(
+                        0xCCE0E0E0, // normal (明るいグレー/白)
+                        0xE5FFAA00, // warning (オレンジ/イエロー)
+                        0xE5FF3333, // alert (赤)
+                        0xCCE0E0E0, // number
+                        0x807050,
+                        0x999000,
+                        0x009999,
+                        0xFF3000
+                );
+                default -> new HudColors(0, 0, 0, 0, 0, 0, 0, 0);
+            };
+        }
 
         float lineR = ((colors.normal() >> 16) & 0xFF) / 255.0F;
         float lineG = ((colors.normal() >> 8) & 0xFF) / 255.0F;
@@ -85,10 +133,11 @@ public class RavenHUDOverlay {
 
         Config.HudMode mode = Config.HUD_MODE.get();
 
-        if (mode == Config.HudMode.RAVEN) {
-            renderRaven(guiGraphics, player, mc, width, height, midX, midY, colors, lineR, lineG, lineB, lineAlpha);
-        } else {
-            renderTypeB(guiGraphics, player, mc, width, height, midX, midY, colors, lineR, lineG, lineB, lineAlpha);
+        switch (mode) {
+            case RAVEN -> renderRaven(guiGraphics, player, mc, width, height, midX, midY, colors, lineR, lineG, lineB, lineAlpha);
+            case TYPE_B -> renderTypeB(guiGraphics, player, mc, width, height, midX, midY, colors, lineR, lineG, lineB, lineAlpha);
+            case ACV -> renderACV(guiGraphics, player, mc, width, height, midX, midY, colors, lineR, lineG, lineB, lineAlpha);
+            case AC6 -> renderAC6(guiGraphics, player, mc, width, height, midX, midY, colors, lineR, lineG, lineB, lineAlpha);
         }
     }
 
@@ -833,6 +882,463 @@ public class RavenHUDOverlay {
 
         builder.addVertexWith2DPose(guiGraphics.pose(), x1, y1).setColor(color);
         builder.addVertexWith2DPose(guiGraphics.pose(), x2, y2).setColor(color);
+
+        RenderTypes.linesTranslucent().draw(builder.buildOrThrow());
+    }
+
+    private void renderACV(GuiGraphicsExtractor guiGraphics, LocalPlayer player, Minecraft mc, int width, int height, double centerX, double centerY,
+                           HudColors colors, float lineR, float lineG, float lineB, float lineAlpha) {
+        float scale = height / 240.0F;
+        float radius = 55.0F * scale;
+        float thick = 1.4F * scale;
+        float offset = 2.0F * scale;
+        float frameOuterRadius = radius + thick;
+        float frameInnerRadius = radius - thick;
+
+        int whiteColor = ((int) (lineAlpha * 255) << 24) | 0x00FFFFFF;
+        int mainColor = colors.normal();
+        int subColor = colors.number();
+        int redColor = colors.alert();
+
+        float outLineThick = thick * 1.5F;
+        float outerRadius = radius + 5.0F * scale;
+
+        // 右下 *90-180 (満腹度)
+        float hungerVal = (player.getFoodData().getFoodLevel() + player.getFoodData().getSaturationLevel()) / 40.0F;
+        hungerVal = Math.max(0.0F, Math.min(1.0F, hungerVal));
+        drawArch(guiGraphics, mainColor, centerX + offset, centerY, outerRadius, thick, 90.0D, 90.0D + 90.0D * hungerVal);
+        
+        // フレーム
+        drawArch(guiGraphics, subColor, centerX + offset, centerY, outerRadius - thick, outLineThick, 90.0D, 180.0D);
+        drawLine(guiGraphics, (float) (centerX + offset + outerRadius - thick + thick * 4), (float) centerY,
+                (float) (centerX + offset + outerRadius - thick), (float) centerY, subColor);
+        drawLine(guiGraphics, (float) (centerX + offset), (float) (centerY + frameOuterRadius),
+                (float) (centerX + offset), (float) (centerY + frameOuterRadius + thick * 4), subColor);
+
+        // 左下 180-*270 (体力)
+        float healthVal = Math.max(player.getHealth() / player.getMaxHealth(), 0.0F);
+        drawArch(guiGraphics, mainColor, centerX - offset, centerY, outerRadius, thick, 180.0D, 180.0D + 90.0D * healthVal);
+        
+        // フレーム
+        drawArch(guiGraphics, subColor, centerX - offset, centerY, outerRadius - thick, outLineThick, 180.0D, 270.0D);
+        drawLine(guiGraphics, (float) (centerX - offset - outerRadius + thick - thick * 4), (float) centerY,
+                (float) (centerX - offset - outerRadius + thick), (float) centerY, subColor);
+        drawLine(guiGraphics, (float) (centerX - offset), (float) (centerY + frameOuterRadius),
+                (float) (centerX - offset), (float) (centerY + frameOuterRadius + thick * 4), subColor);
+
+        float spikeThick = 0.6F * scale;
+        float spikeLength = 6.0F * scale;
+
+        // 右下内側 (速度)
+        double speedVal = currentSpeed / 100.0D;
+        float speedFactor = (float) (1.0D - Math.min(Math.sqrt(speedVal) / 2.0D, 1.0D));
+        drawArch(guiGraphics, mainColor, centerX + offset, centerY, radius, thick, 105.0D + 75.0D * speedFactor, 180.0D);
+        
+        // フレーム
+        drawArchLine(guiGraphics, whiteColor, centerX + offset, centerY, frameOuterRadius, 100.0D, 180.0D);
+        drawArchLine(guiGraphics, whiteColor, centerX + offset, centerY, frameInnerRadius, 100.0D, 180.0D);
+        
+        // フレーム端
+        float startX = (float) (Math.sin(100.0 * Math.PI / 180.0) * frameOuterRadius);
+        float startY = (float) (Math.cos(100.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX + offset + startX), (float) (centerY - startY),
+                (float) (centerX + offset + startX - thick * 5), (float) (centerY - startY), whiteColor);
+        float endX = (float) (Math.sin(180.0 * Math.PI / 180.0) * frameOuterRadius);
+        float endY = (float) (Math.cos(180.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX + offset + endX), (float) (centerY - endY),
+                (float) (centerX + offset + endX), (float) (centerY - endY - thick * 5), whiteColor);
+
+        // とげ
+        float spikeSin = (float) Math.sin(135.0 * Math.PI / 180.0);
+        float spikeCos = (float) Math.cos(135.0 * Math.PI / 180.0);
+        float spikeBottomX = (float) (centerX + offset + spikeSin * frameInnerRadius);
+        float spikeBottomY = (float) (centerY - spikeCos * frameInnerRadius);
+        float spikeTopX = (float) (centerX + offset + spikeSin * (frameInnerRadius - spikeLength));
+        float spikeTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength));
+        drawLine(guiGraphics, spikeBottomX, spikeBottomY, spikeTopX, spikeTopY, redColor);
+        float spikeTopTopX = (float) (centerX + offset + spikeSin * (frameInnerRadius - spikeLength * 2));
+        float spikeTopTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength * 2));
+        drawLine(guiGraphics, spikeTopX, spikeTopY, spikeTopTopX, spikeTopTopY, redColor);
+
+        // 左下内側 (高度)
+        float posHeightVal = (float) player.getY();
+        drawArch(guiGraphics, mainColor, centerX - offset, centerY, radius, thick, 180.0D, 180.0D + 75.0D * Math.max(0.0F, Math.min(posHeightVal, 256.0F)) / 256.0F);
+        
+        // フレーム
+        drawArchLine(guiGraphics, whiteColor, centerX - offset, centerY, frameOuterRadius, 180.0D, 260.0D);
+        drawArchLine(guiGraphics, whiteColor, centerX - offset, centerY, frameInnerRadius, 180.0D, 260.0D);
+        
+        // フレーム端
+        startX = (float) (Math.sin(180.0 * Math.PI / 180.0) * frameOuterRadius);
+        startY = (float) (Math.cos(180.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX - offset + startX), (float) (centerY - startY),
+                (float) (centerX - offset + startX), (float) (centerY - startY - thick * 5), whiteColor);
+        endX = (float) (Math.sin(260.0 * Math.PI / 180.0) * frameOuterRadius);
+        endY = (float) (Math.cos(260.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX - offset + endX), (float) (centerY - endY),
+                (float) (centerX - offset + endX + thick * 5), (float) (centerY - endY), whiteColor);
+
+        // とげ
+        spikeSin = (float) Math.sin(225.0 * Math.PI / 180.0);
+        spikeCos = (float) Math.cos(225.0 * Math.PI / 180.0);
+        spikeBottomX = (float) (centerX - offset + spikeSin * frameInnerRadius);
+        spikeBottomY = (float) (centerY - spikeCos * frameInnerRadius);
+        spikeTopX = (float) (centerX - offset + spikeSin * (frameInnerRadius - spikeLength));
+        spikeTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength));
+        drawLine(guiGraphics, spikeBottomX, spikeBottomY, spikeTopX, spikeTopY, redColor);
+        spikeTopTopX = (float) (centerX - offset + spikeSin * (frameInnerRadius - spikeLength * 2));
+        spikeTopTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength * 2));
+        drawLine(guiGraphics, spikeTopX, spikeTopY, spikeTopTopX, spikeTopTopY, redColor);
+
+        // 右上 0-*75 (メインハンドツール耐久値)
+        ItemStack mainHand = player.getMainHandItem();
+        int heldDurableVal = mainHand.getMaxDamage() - mainHand.getDamageValue();
+        if (mainHand.isDamageableItem()) {
+            drawArch(guiGraphics, mainColor, centerX + offset, centerY, radius, thick, 0.0D, 75.0D * heldDurableVal / mainHand.getMaxDamage());
+        }
+        // フレーム
+        drawArchLine(guiGraphics, whiteColor, centerX + offset, centerY, frameOuterRadius, 0.0D, 80.0D);
+        drawArchLine(guiGraphics, whiteColor, centerX + offset, centerY, frameInnerRadius, 0.0D, 80.0D);
+        startX = (float) (Math.sin(0.0 * Math.PI / 180.0) * frameOuterRadius);
+        startY = (float) (Math.cos(0.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX + offset + startX), (float) (centerY - startY),
+                (float) (centerX + offset + startX), (float) (centerY - startY + thick * 5), whiteColor);
+        endX = (float) (Math.sin(80.0 * Math.PI / 180.0) * frameOuterRadius);
+        endY = (float) (Math.cos(80.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX + offset + endX), (float) (centerY - endY),
+                (float) (centerX + offset + endX - thick * 5), (float) (centerY - endY), whiteColor);
+
+        // とげ
+        spikeSin = (float) Math.sin(45.0 * Math.PI / 180.0);
+        spikeCos = (float) Math.cos(45.0 * Math.PI / 180.0);
+        spikeBottomX = (float) (centerX + offset + spikeSin * frameInnerRadius);
+        spikeBottomY = (float) (centerY - spikeCos * frameInnerRadius);
+        spikeTopX = (float) (centerX + offset + spikeSin * (frameInnerRadius - spikeLength));
+        spikeTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength));
+        drawLine(guiGraphics, spikeBottomX, spikeBottomY, spikeTopX, spikeTopY, redColor);
+        spikeTopTopX = (float) (centerX + offset + spikeSin * (frameInnerRadius - spikeLength * 2));
+        spikeTopTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength * 2));
+        drawLine(guiGraphics, spikeTopX, spikeTopY, spikeTopTopX, spikeTopTopY, redColor);
+
+        // 左上 *285-360 (アーマー値)
+        float armorVal = player.getArmorValue() / 20.0F;
+        if (armorVal > 0.0F) {
+            drawArch(guiGraphics, mainColor, centerX - offset, centerY, radius, thick, 285.0D + 75.0D * (1.0F - armorVal), 360.0D);
+        }
+        // フレーム
+        drawArchLine(guiGraphics, whiteColor, centerX - offset, centerY, frameOuterRadius, 280.0D, 360.0D);
+        drawArchLine(guiGraphics, whiteColor, centerX - offset, centerY, frameInnerRadius, 280.0D, 360.0D);
+        startX = (float) (Math.sin(280.0 * Math.PI / 180.0) * frameOuterRadius);
+        startY = (float) (Math.cos(280.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX - offset + startX), (float) (centerY - startY),
+                (float) (centerX - offset + startX + thick * 5), (float) (centerY - startY), whiteColor);
+        endX = (float) (Math.sin(360.0 * Math.PI / 180.0) * frameOuterRadius);
+        endY = (float) (Math.cos(360.0 * Math.PI / 180.0) * frameOuterRadius);
+        drawLine(guiGraphics, (float) (centerX - offset + endX), (float) (centerY - endY),
+                (float) (centerX - offset + endX), (float) (centerY - endY + thick * 5), whiteColor);
+
+        // とげ
+        spikeSin = (float) Math.sin(315.0 * Math.PI / 180.0);
+        spikeCos = (float) Math.cos(315.0 * Math.PI / 180.0);
+        spikeBottomX = (float) (centerX - offset + spikeSin * frameInnerRadius);
+        spikeBottomY = (float) (centerY - spikeCos * frameInnerRadius);
+        spikeTopX = (float) (centerX - offset + spikeSin * (frameInnerRadius - spikeLength));
+        spikeTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength));
+        drawLine(guiGraphics, spikeBottomX, spikeBottomY, spikeTopX, spikeTopY, redColor);
+        spikeTopTopX = (float) (centerX - offset + spikeSin * (frameInnerRadius - spikeLength * 2));
+        spikeTopTopY = (float) (centerY - spikeCos * (frameInnerRadius - spikeLength * 2));
+        drawLine(guiGraphics, spikeTopX, spikeTopY, spikeTopTopX, spikeTopTopY, redColor);
+
+        // 残りのフレーム (上下の水平線)
+        drawLine(guiGraphics, (float) (centerX - offset), (float) (centerY - frameOuterRadius),
+                (float) (centerX + offset), (float) (centerY - frameOuterRadius), whiteColor);
+        drawLine(guiGraphics, (float) (centerX - offset), (float) (centerY + frameOuterRadius),
+                (float) (centerX + offset), (float) (centerY + frameOuterRadius), whiteColor);
+
+        // 三角形 (方位指針)
+        float yaw = -player.getYRot();
+        float triBaseX = (float) (Math.sin(yaw * Math.PI / 180.0) * (radius + 12.5F * scale));
+        float triBaseY = (float) (Math.cos(yaw * Math.PI / 180.0) * (radius + 12.5F * scale));
+        float triRightX = (float) (Math.sin((yaw + 2) * Math.PI / 180.0) * (radius + 15.0F * scale));
+        float triRightY = (float) (Math.cos((yaw + 2) * Math.PI / 180.0) * (radius + 15.0F * scale));
+        float triLeftX = (float) (Math.sin((yaw - 2) * Math.PI / 180.0) * (radius + 15.0F * scale));
+        float triLeftY = (float) (Math.cos((yaw - 2) * Math.PI / 180.0) * (radius + 15.0F * scale));
+
+        drawPolygon(guiGraphics, whiteColor,
+                centerX + triBaseX, centerY - triBaseY,
+                centerX + triRightX, centerY - triRightY,
+                centerX + triLeftX, centerY - triLeftY);
+
+        drawPolygon(guiGraphics, whiteColor,
+                centerX - triBaseX, centerY + triBaseY,
+                centerX - triRightX, centerY + triRightY,
+                centerX - triLeftX, centerY + triLeftY);
+
+        // テキスト表示
+        float fontHeight = mc.font.lineHeight;
+
+        // 左下 (Hunger)
+        String hungerStr = String.format("%06.2f", hungerVal * 100.0F);
+        guiGraphics.text(mc.font, hungerStr, (int) (centerX + 60.0F * scale), (int) (centerY - fontHeight), subColor, false);
+
+        // 右下 (Health)
+        String healthStr = String.format("%06.2f", healthVal * 100.0F);
+        guiGraphics.text(mc.font, healthStr, (int) (centerX - 60.0F * scale - mc.font.width(healthStr)), (int) (centerY - fontHeight), subColor, false);
+
+        // 速度
+        String speedStr = String.format("%.2f", currentSpeed);
+        guiGraphics.text(mc.font, speedStr, (int) (centerX + 50.0F * scale - mc.font.width(speedStr)), (int) (centerY + 25.0F * scale - fontHeight), subColor, false);
+
+        // 高度
+        String posHeightStr = String.format("%06.2f", posHeightVal);
+        guiGraphics.text(mc.font, posHeightStr, (int) (centerX - 50.0F * scale), (int) (centerY + 25.0F * scale - fontHeight), subColor, false);
+
+        // メインハンド耐久値
+        if (mainHand.isDamageableItem()) {
+            String length = String.valueOf(String.valueOf(mainHand.getMaxDamage()).length());
+            String durableStr = String.format("%0" + length + "d", heldDurableVal);
+            guiGraphics.text(mc.font, durableStr, (int) (centerX + 50.0F * scale - mc.font.width(durableStr)), (int) (centerY - 25.0F * scale), subColor, false);
+        }
+
+        // アーマー値
+        if (armorVal > 0.0F) {
+            String armorStr = String.format("%06.2f", armorVal * 100.0F);
+            guiGraphics.text(mc.font, armorStr, (int) (centerX - 50.0F * scale), (int) (centerY - 25.0F * scale), subColor, false);
+        }
+
+        // 防具の個別表示
+        int armorInv = 0;
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (!slot.isArmor()) continue;
+            ItemStack stack = player.getItemBySlot(slot);
+            armorInv++;
+            if (!stack.isEmpty() && stack.isDamageableItem()) {
+                int durableVal = stack.getMaxDamage() - stack.getDamageValue();
+                String length = String.valueOf(String.valueOf(stack.getMaxDamage()).length());
+                String durableStr = String.format("%0" + length + "d", durableVal);
+                guiGraphics.text(mc.font, durableStr,
+                        (int) (centerX - (15.0F * (5 - armorInv) + 10.0F) * scale - mc.font.width(durableStr)),
+                        (int) (centerY - (15.0F * armorInv + 10.0F) * scale - fontHeight),
+                        subColor, false);
+            }
+        }
+    }
+
+    private void renderAC6(GuiGraphicsExtractor guiGraphics, LocalPlayer player, Minecraft mc, int width, int height, double centerX, double centerY,
+                           HudColors colors, float lineR, float lineG, float lineB, float lineAlpha) {
+        float scale = height / 240.0F;
+        int frameColor = ((int) (lineAlpha * 255) << 24) | (colors.normal() & 0x00FFFFFF);
+        int textColor = colors.number();
+
+        // 1. 中央レティクル
+        double retRadius = 35.0D * scale;
+        double retThick = 1.0D * scale;
+
+        // 左側円弧 (体力 AP %, 120〜240度)
+        float hpRate = player.getHealth() / player.getMaxHealth();
+        double leftStart = 120.0D;
+        double leftEnd = 120.0D + 120.0D * hpRate;
+        drawArch(guiGraphics, frameColor, centerX - 5.0D * scale, centerY, retRadius, retThick, leftStart, leftEnd);
+        drawArchLine(guiGraphics, frameColor, centerX - 5.0D * scale, centerY, retRadius + retThick, 120.0D, 240.0D);
+
+        // 右側円弧 (メインハンドツールの耐久値、または満腹度、300〜420度)
+        ItemStack mainHand = player.getMainHandItem();
+        float rightRate = 1.0F;
+        if (mainHand.isDamageableItem()) {
+            rightRate = 1.0F - ((float) mainHand.getDamageValue() / (float) mainHand.getMaxDamage());
+        } else {
+            rightRate = player.getFoodData().getFoodLevel() / 20.0F;
+        }
+        double rightStart = 300.0D;
+        double rightEnd = 300.0D + 120.0D * rightRate;
+        drawArch(guiGraphics, frameColor, centerX + 5.0D * scale, centerY, retRadius, retThick, rightStart, rightEnd);
+        drawArchLine(guiGraphics, frameColor, centerX + 5.0D * scale, centerY, retRadius + retThick, 300.0D, 420.0D);
+
+        // 中央レティクル下の高度
+        String altStr = String.format("%.0fm", player.getY());
+        guiGraphics.text(mc.font, altStr, (int) (centerX - mc.font.width(altStr) / 2.0D), (int) (centerY + retRadius + 5.0D * scale), textColor, false);
+
+        // 2. 左下表示 (AP)
+        double apX = 30.0D * scale;
+        double apY = height - 60.0D * scale;
+
+        guiGraphics.text(mc.font, "AP", (int) apX, (int) apY, textColor, false);
+        String apValStr = String.format("%05d", (int) (player.getHealth() * 500));
+        guiGraphics.text(mc.font, apValStr, (int) (apX + 20.0D * scale), (int) (apY - 2.0D * scale), textColor, false);
+
+        // APゲージバー
+        double barWidth = 100.0D * scale;
+        double barHeight = 2.0D * scale;
+        guiGraphics.fill((int) apX, (int) (apY + 12.0D * scale), (int) (apX + barWidth), (int) (apY + 12.0D * scale + barHeight), 0x33FFFFFF & frameColor);
+        guiGraphics.fill((int) apX, (int) (apY + 12.0D * scale), (int) (apX + barWidth * hpRate), (int) (apY + 12.0D * scale + barHeight), frameColor);
+
+        // REPAIR, EXPANSION のカウント
+        int repairCount = 0;
+        int expansionCount = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (!stack.isEmpty()) {
+                if (stack.is(Items.POTION) || stack.is(Items.GOLDEN_APPLE) || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+                    repairCount += stack.getCount();
+                } else if (stack.is(Items.TOTEM_OF_UNDYING)) {
+                    expansionCount += stack.getCount();
+                }
+            }
+        }
+        if (player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
+            expansionCount += player.getOffhandItem().getCount();
+        }
+
+        double subY = apY + 20.0D * scale;
+        guiGraphics.text(mc.font, "EXPANSION", (int) apX, (int) subY, textColor, false);
+        guiGraphics.text(mc.font, String.valueOf(expansionCount), (int) (apX + 60.0D * scale), (int) subY, textColor, false);
+
+        guiGraphics.text(mc.font, "REPAIR", (int) apX, (int) (subY + 10.0D * scale), textColor, false);
+        guiGraphics.text(mc.font, String.valueOf(repairCount), (int) (apX + 60.0D * scale), (int) (subY + 10.0D * scale), textColor, false);
+
+        // 3. 中央下表示 (ENゲージバー)
+        double enWidth = 120.0D * scale;
+        double enHeight = 3.0D * scale;
+        double enX = centerX - enWidth / 2.0D;
+        double enY = height - 35.0D * scale;
+        float foodRate = player.getFoodData().getFoodLevel() / 20.0F;
+        guiGraphics.fill((int) enX, (int) enY, (int) (enX + enWidth), (int) (enY + enHeight), 0x33FFFFFF & frameColor);
+        guiGraphics.fill((int) enX, (int) enY, (int) (enX + enWidth * foodRate), (int) (enY + enHeight), frameColor);
+        guiGraphics.horizontalLine((int) (enX - 5.0D), (int) (enX + enWidth + 5.0D), (int) (enY + enHeight + 2.0D), frameColor);
+
+        // 4. 右下表示 (武器残弾数 / 耐久値)
+        double wpX = width - 120.0D * scale;
+        double wpY = height - 50.0D * scale;
+
+        if (!mainHand.isEmpty()) {
+            String raName = mainHand.getItem().getName(mainHand).getString();
+            if (raName.length() > 10) raName = raName.substring(0, 10);
+            guiGraphics.text(mc.font, "RA  " + raName, (int) wpX, (int) wpY, textColor, false);
+            String raAmmo = "-";
+            if (mainHand.isDamageableItem()) {
+                raAmmo = String.valueOf(mainHand.getMaxDamage() - mainHand.getDamageValue());
+            } else if (mainHand.is(Items.BOW) || mainHand.is(Items.CROSSBOW)) {
+                boolean isBow = mainHand.is(Items.BOW);
+                int ammoCount = IntStream.range(0, player.getInventory().getContainerSize())
+                        .mapToObj(player.getInventory()::getItem)
+                        .filter(stack -> !stack.isEmpty())
+                        .filter(stack -> isBow ? stack.is(ItemTags.ARROWS) : (stack.is(ItemTags.ARROWS) || stack.is(Items.FIREWORK_ROCKET)))
+                        .mapToInt(ItemStack::getCount)
+                        .sum();
+                raAmmo = String.valueOf(ammoCount);
+            }
+            guiGraphics.text(mc.font, raAmmo, (int) (wpX + 80.0D * scale), (int) wpY, textColor, false);
+        }
+
+        ItemStack offHand = player.getOffhandItem();
+        if (!offHand.isEmpty()) {
+            String laName = offHand.getItem().getName(offHand).getString();
+            if (laName.length() > 10) laName = laName.substring(0, 10);
+            guiGraphics.text(mc.font, "LA  " + laName, (int) wpX, (int) (wpY + 10.0D * scale), textColor, false);
+            String laAmmo = "-";
+            if (offHand.isDamageableItem()) {
+                laAmmo = String.valueOf(offHand.getMaxDamage() - offHand.getDamageValue());
+            }
+            guiGraphics.text(mc.font, laAmmo, (int) (wpX + 80.0D * scale), (int) (wpY + 10.0D * scale), textColor, false);
+        }
+
+        ItemStack chestArmor = player.getItemBySlot(EquipmentSlot.CHEST);
+        if (!chestArmor.isEmpty()) {
+            String rbName = chestArmor.getItem().getName(chestArmor).getString();
+            if (rbName.length() > 10) rbName = rbName.substring(0, 10);
+            guiGraphics.text(mc.font, "RB  " + rbName, (int) wpX, (int) (wpY - 20.0D * scale), textColor, false);
+            String rbVal = chestArmor.isDamageableItem() ? String.valueOf(chestArmor.getMaxDamage() - chestArmor.getDamageValue()) : "-";
+            guiGraphics.text(mc.font, rbVal, (int) (wpX + 80.0D * scale), (int) (wpY - 20.0D * scale), textColor, false);
+        }
+
+        ItemStack legsArmor = player.getItemBySlot(EquipmentSlot.LEGS);
+        if (!legsArmor.isEmpty()) {
+            String lbName = legsArmor.getItem().getName(legsArmor).getString();
+            if (lbName.length() > 10) lbName = lbName.substring(0, 10);
+            guiGraphics.text(mc.font, "LB  " + lbName, (int) wpX, (int) (wpY - 10.0D * scale), textColor, false);
+            String lbVal = legsArmor.isDamageableItem() ? String.valueOf(legsArmor.getMaxDamage() - legsArmor.getDamageValue()) : "-";
+            guiGraphics.text(mc.font, lbVal, (int) (wpX + 80.0D * scale), (int) (wpY - 10.0D * scale), textColor, false);
+        }
+    }
+
+    private void drawArch(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
+                          double radius, double thick, double startAngle, double endAngle) {
+        double rad = Math.PI / 180.0;
+        double start = startAngle * rad;
+        double end = endAngle * rad;
+        if (end < start) {
+            double temp = start;
+            start = end;
+            end = temp;
+        }
+
+        double outer = radius + thick;
+        double inner = radius - thick;
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+
+        double step = 5.0 * rad;
+        double current = start;
+
+        while (current < end) {
+            double next = Math.min(current + step, end);
+
+            double sinCurr = Math.sin(current);
+            double cosCurr = Math.cos(current);
+            double sinNext = Math.sin(next);
+            double cosNext = Math.cos(next);
+
+            float x1_out = (float) (centerX + sinCurr * outer);
+            float y1_out = (float) (centerY - cosCurr * outer);
+            float x1_in  = (float) (centerX + sinCurr * inner);
+            float y1_in  = (float) (centerY - cosCurr * inner);
+
+            float x2_out = (float) (centerX + sinNext * outer);
+            float y2_out = (float) (centerY - cosNext * outer);
+            float x2_in  = (float) (centerX + sinNext * inner);
+            float y2_in  = (float) (centerY - cosNext * inner);
+
+            builder.addVertexWith2DPose(guiGraphics.pose(), x1_out, y1_out).setColor(color);
+            builder.addVertexWith2DPose(guiGraphics.pose(), x2_out, y2_out).setColor(color);
+            builder.addVertexWith2DPose(guiGraphics.pose(), x1_in, y1_in).setColor(color);
+
+            builder.addVertexWith2DPose(guiGraphics.pose(), x2_out, y2_out).setColor(color);
+            builder.addVertexWith2DPose(guiGraphics.pose(), x2_in, y2_in).setColor(color);
+            builder.addVertexWith2DPose(guiGraphics.pose(), x1_in, y1_in).setColor(color);
+
+            current = next;
+        }
+
+        RenderTypes.debugTriangleFan().draw(builder.buildOrThrow());
+    }
+
+    private void drawArchLine(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
+                              double radius, double startAngle, double endAngle) {
+        double rad = Math.PI / 180.0;
+        double start = startAngle * rad;
+        double end = endAngle * rad;
+        if (end < start) {
+            double temp = start;
+            start = end;
+            end = temp;
+        }
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+
+        double step = 5.0 * rad;
+        double current = start;
+
+        while (current < end) {
+            float x = (float) (centerX + Math.sin(current) * radius);
+            float y = (float) (centerY - Math.cos(current) * radius);
+            builder.addVertexWith2DPose(guiGraphics.pose(), x, y).setColor(color);
+            current += step;
+        }
+        float xEnd = (float) (centerX + Math.sin(end) * radius);
+        float yEnd = (float) (centerY - Math.cos(end) * radius);
+        builder.addVertexWith2DPose(guiGraphics.pose(), xEnd, yEnd).setColor(color);
 
         RenderTypes.linesTranslucent().draw(builder.buildOrThrow());
     }

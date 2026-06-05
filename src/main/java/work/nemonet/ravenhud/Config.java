@@ -10,8 +10,12 @@ public class Config {
             .define("hudEnabled", true);
 
     public static final ModConfigSpec.EnumValue<HudMode> HUD_MODE = BUILDER
-            .comment("HUD mode (RAVEN = Armored Core style, TYPE_B = Cockpit style)")
+            .comment("HUD mode (RAVEN = Armored Core style, TYPE_B = Cockpit style, ACV = V style, AC6 = VI style)")
             .defineEnum("hudMode", HudMode.RAVEN);
+
+    public static final ModConfigSpec.EnumValue<ColorPreset> COLOR_PRESET = BUILDER
+            .comment("Color preset (CUSTOM = use custom hex values below, or select RAVEN, TYPE_B, ACV, AC6 presets)")
+            .defineEnum("colorPreset", ColorPreset.CUSTOM);
 
     public static final ModConfigSpec.ConfigValue<String> COLOR_NORMAL = BUILDER
             .comment("Normal Line Color (AARRGGBB, hex)")
@@ -61,7 +65,17 @@ public class Config {
 
     public enum HudMode {
         RAVEN,
-        TYPE_B
+        TYPE_B,
+        ACV,
+        AC6
+    }
+
+    public enum ColorPreset {
+        CUSTOM,
+        RAVEN,
+        TYPE_B,
+        ACV,
+        AC6
     }
 }
 
