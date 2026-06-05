@@ -5,7 +5,7 @@
   "ravenhud.configuration.section.ravenhud.client.toml": "クライアント設定",
   "ravenhud.configuration.section.ravenhud.client.toml.title": "RavenHUD クライアント設定項目",
   "ravenhud.configuration.colorPreset": "カラープリセット",
-  "ravenhud.configuration.colorPreset.tooltip": "カラープリセットを選択します（CUSTOMを選ぶと以下の個別色設定が反映されます）",
+  "ravenhud.configuration.colorPreset.tooltip": "カラープリセットを選択します（CUSTOMを選ぶと以下の個別色設定が反映されます。ORANGE, CYAN, GREEN, WHITEから選択可能です）",
   "ravenhud.configuration.hudEnabled": "HUDを有効化",
   "ravenhud.configuration.hudEnabled.tooltip": "HUDを表示するかどうか設定します",
   "ravenhud.configuration.hudMode": "HUDモード",

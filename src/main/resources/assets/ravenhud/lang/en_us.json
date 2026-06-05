@@ -5,7 +5,7 @@
   "ravenhud.configuration.section.ravenhud.client.toml": "Client Settings",
   "ravenhud.configuration.section.ravenhud.client.toml.title": "RavenHUD Client Configurations",
   "ravenhud.configuration.colorPreset": "Color Preset",
-  "ravenhud.configuration.colorPreset.tooltip": "Select a color preset (CUSTOM uses hex values below)",
+  "ravenhud.configuration.colorPreset.tooltip": "Select a color preset (CUSTOM uses hex values below, or select ORANGE, CYAN, GREEN, WHITE)",
   "ravenhud.configuration.hudEnabled": "HUD Enabled",
   "ravenhud.configuration.hudEnabled.tooltip": "Whether to display the HUD",
   "ravenhud.configuration.hudMode": "HUD Mode",

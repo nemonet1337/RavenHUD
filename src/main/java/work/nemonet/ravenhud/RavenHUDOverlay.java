@@ -82,7 +82,7 @@ public class RavenHUDOverlay {
             );
         } else {
             colors = switch (preset) {
-                case RAVEN -> new HudColors(
+                case ORANGE -> new HudColors(
                         0xC7FFAE00, // normal
                         0xE5FFFF00, // warning
                         0xE5FF0000, // alert
@@ -92,7 +92,7 @@ public class RavenHUDOverlay {
                         0x009999,   // diamond
                         0xFF3000    // lava
                 );
-                case TYPE_B -> new HudColors(
+                case CYAN -> new HudColors(
                         0xCC00FFD8, // normal
                         0xE5FFFF00,
                         0xE5FF0000,
@@ -102,7 +102,7 @@ public class RavenHUDOverlay {
                         0x009999,
                         0xFF3000
                 );
-                case ACV -> new HudColors(
+                case GREEN -> new HudColors(
                         0xCC60FFC4, // normal (エメラルドグリーン)
                         0xE5FFFF00,
                         0xE5FF0000,
@@ -112,7 +112,7 @@ public class RavenHUDOverlay {
                         0x009999,
                         0xFF3000
                 );
-                case AC6 -> new HudColors(
+                case WHITE -> new HudColors(
                         0xCCE0E0E0, // normal (明るいグレー/白)
                         0xE5FFAA00, // warning (オレンジ/イエロー)
                         0xE5FF3333, // alert (赤)

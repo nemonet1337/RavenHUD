@@ -14,7 +14,7 @@ public class Config {
             .defineEnum("hudMode", HudMode.RAVEN);
 
     public static final ModConfigSpec.EnumValue<ColorPreset> COLOR_PRESET = BUILDER
-            .comment("Color preset (CUSTOM = use custom hex values below, or select RAVEN, TYPE_B, ACV, AC6 presets)")
+            .comment("Color preset (CUSTOM = use custom hex values below, or select ORANGE, CYAN, GREEN, WHITE presets)")
             .defineEnum("colorPreset", ColorPreset.CUSTOM);
 
     public static final ModConfigSpec.ConfigValue<String> COLOR_NORMAL = BUILDER
@@ -72,10 +72,10 @@ public class Config {
 
     public enum ColorPreset {
         CUSTOM,
-        RAVEN,
-        TYPE_B,
-        ACV,
-        AC6
+        ORANGE,
+        CYAN,
+        GREEN,
+        WHITE
     }
 }
 
