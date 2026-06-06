@@ -4,6 +4,7 @@ import net.minecraft.client.KeyMapping;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -14,8 +15,10 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import org.lwjgl.glfw.GLFW;
 
 @Mod(value = RavenHUD.MODID, dist = Dist.CLIENT)
@@ -52,6 +55,21 @@ public class RavenHUDClient {
                     Identifier.fromNamespaceAndPath(RavenHUD.MODID, "hud_overlay"),
                     (guiGraphics, deltaTracker) -> overlay.render(guiGraphics, deltaTracker)
             );
+        }
+
+        @SubscribeEvent
+        public static void registerScreens(RegisterMenuScreensEvent event) {
+            event.register(Registration.MODIFICATION_WORKBENCH_CONTAINER.get(), ModificationWorkbenchScreen::new);
+        }
+
+        @SubscribeEvent
+        public static void buildContents(BuildCreativeModeTabContentsEvent event) {
+            if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+                event.accept(Registration.MODIFICATION_WORKBENCH_ITEM.get());
+            }
+            if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+                event.accept(Registration.GOGGLE.get());
+            }
         }
     }
 

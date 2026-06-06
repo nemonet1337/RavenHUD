@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "ravenhud:block/modification_workbench"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SSS",
+    "SRS",
+    " S "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:stones"
+    },
+    "R": {
+      "tag": "c:redstone_dusts"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "ravenhud:goggle"
+  }
+}

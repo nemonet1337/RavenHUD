@@ -1,6 +1,11 @@
 {
   "itemGroup.ravenhud": "RavenHUD",
   
+  "item.ravenhud.goggle": "RSHUD Goggle",
+  "block.ravenhud.modification_workbench": "Modification Workbench",
+  "container.ravenhud.modification_workbench": "Modification Workbench",
+  "ravenhud.modified.tooltip": "RSHUD mounted",
+
   "ravenhud.configuration.title": "RavenHUD Configs",
   "ravenhud.configuration.section.ravenhud.client.toml": "Client Settings",
   "ravenhud.configuration.section.ravenhud.client.toml.title": "RavenHUD Client Configurations",

@@ -13,6 +13,8 @@ public class RavenHUD {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public RavenHUD(IEventBus modEventBus, ModContainer modContainer) {
+        Registration.init(modEventBus);
+
         // Register our mod's ModConfigSpec as CLIENT config
         modContainer.registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
 

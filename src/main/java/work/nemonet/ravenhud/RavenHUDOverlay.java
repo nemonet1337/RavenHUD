@@ -8,11 +8,13 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import java.util.Arrays;
 import java.util.List;
@@ -55,6 +57,23 @@ public class RavenHUDOverlay {
         }
 
         if (mc.options.hideGui) {
+            return;
+        }
+
+        // HUD表示条件の判定 (ゴーグル装備またはHUD改造ヘルメット装備)
+        ItemStack headStack = player.getItemBySlot(EquipmentSlot.HEAD);
+        boolean canRender = false;
+        if (!headStack.isEmpty()) {
+            if (headStack.getItem() instanceof GoggleItem) {
+                canRender = true;
+            } else {
+                CustomData customData = headStack.get(DataComponents.CUSTOM_DATA);
+                if (customData != null && customData.copyTag().getBoolean("ravenhudCanRender").orElse(false)) {
+                    canRender = true;
+                }
+            }
+        }
+        if (!canRender) {
             return;
         }
 
