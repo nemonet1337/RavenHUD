@@ -1,12 +1,18 @@
 package work.nemonet.ravenhud;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.*;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.navigation.*;
+import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.entity.*;
+import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
+import net.minecraft.client.gui.render.TextureSetup;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.ItemTags;
@@ -15,7 +21,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -60,22 +65,7 @@ public class RavenHUDOverlay {
             return;
         }
 
-        // HUD表示条件の判定 (ゴーグル装備またはHUD改造ヘルメット装備)
-        ItemStack headStack = player.getItemBySlot(EquipmentSlot.HEAD);
-        boolean canRender = false;
-        if (!headStack.isEmpty()) {
-            if (headStack.getItem() instanceof GoggleItem) {
-                canRender = true;
-            } else {
-                CustomData customData = headStack.get(DataComponents.CUSTOM_DATA);
-                if (customData != null && customData.copyTag().getBoolean("ravenhudCanRender").orElse(false)) {
-                    canRender = true;
-                }
-            }
-        }
-        if (!canRender) {
-            return;
-        }
+
 
         // 速度の更新
         updateSpeed(player);
@@ -832,7 +822,7 @@ public class RavenHUDOverlay {
                     }
                     case FEET -> {
                         int bootsDrawY = armorDrawY + 37;
-                        guiGraphics.fill(armorDrawX, bootsDrawY, armorDrawX + 5, bootsDrawY + 7, c);
+                    guiGraphics.fill(armorDrawX, bootsDrawY, armorDrawX + 5, bootsDrawY + 7, c);
                         guiGraphics.fill(armorDrawX + 6, bootsDrawY, armorDrawX + 11, bootsDrawY + 7, c);
                     }
                     default -> {}
@@ -865,44 +855,290 @@ public class RavenHUDOverlay {
         return x >= min && x <= max;
     }
 
-    // Modern 2D Polygon Render using addVertexWith2DPose and RenderTypes
+    private void addValLine(VertexConsumer consumer, org.joml.Matrix3x2f pose, float x1, float y1, float x2, float y2, float width, int color) {
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len < 0.0001f) return;
+
+        float nx = -dy / len * (width / 2.0f);
+        float ny = dx / len * (width / 2.0f);
+
+        float x1_l = x1 + nx;
+        float y1_l = y1 + ny;
+        float x1_r = x1 - nx;
+        float y1_r = y1 - ny;
+
+        float x2_l = x2 + nx;
+        float y2_l = y2 + ny;
+        float x2_r = x2 - nx;
+        float y2_r = y2 - ny;
+
+        consumer.addVertexWith2DPose(pose, x1_l, y1_l).setColor(color);
+        consumer.addVertexWith2DPose(pose, x2_l, y2_l).setColor(color);
+        consumer.addVertexWith2DPose(pose, x2_r, y2_r).setColor(color);
+        consumer.addVertexWith2DPose(pose, x1_r, y1_r).setColor(color);
+    }
+
+    // Modern 2D Polygon Render using addVertexWith2DPose and BufferUploader
     private void drawPolygon(GuiGraphicsExtractor guiGraphics, int color, double... vertices) {
         if (vertices.length < 6 || vertices.length % 2 != 0) return;
 
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
+        final org.joml.Matrix3x2f poseCopy = new org.joml.Matrix3x2f(guiGraphics.pose());
 
-        for (int k = 0; k < vertices.length; k += 2) {
-            builder.addVertexWith2DPose(guiGraphics.pose(), (float) vertices[k], (float) vertices[k + 1]).setColor(color);
-        }
+        guiGraphics.submitGuiElementRenderState(new GuiElementRenderState() {
+            @Override
+            public void buildVertices(VertexConsumer consumer) {
+                int n = vertices.length / 2;
+                for (int i = 0; i < n - 2; i++) {
+                    float x0 = (float) vertices[0];
+                    float y0 = (float) vertices[1];
+                    float x1 = (float) vertices[(i + 1) * 2];
+                    float y1 = (float) vertices[(i + 1) * 2 + 1];
+                    float x2 = (float) vertices[(i + 2) * 2];
+                    float y2 = (float) vertices[(i + 2) * 2 + 1];
 
-        RenderTypes.debugTriangleFan().draw(builder.buildOrThrow());
+                    consumer.addVertexWith2DPose(poseCopy, x0, y0).setColor(color);
+                    consumer.addVertexWith2DPose(poseCopy, x1, y1).setColor(color);
+                    consumer.addVertexWith2DPose(poseCopy, x2, y2).setColor(color);
+                    consumer.addVertexWith2DPose(poseCopy, x2, y2).setColor(color);
+                }
+            }
+
+            @Override
+            public RenderPipeline pipeline() {
+                return RenderPipelines.GUI;
+            }
+
+            @Override
+            public TextureSetup textureSetup() {
+                return TextureSetup.noTexture();
+            }
+
+            @Override
+            public ScreenRectangle scissorArea() {
+                return null;
+            }
+
+            @Override
+            public ScreenRectangle bounds() {
+                return new ScreenRectangle(0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight());
+            }
+        });
     }
 
-    // Modern 2D Line Loop Render using addVertexWith2DPose and RenderTypes
+    // Modern 2D Line Loop Render using addVertexWith2DPose and BufferUploader
     private void drawLineLoop(GuiGraphicsExtractor guiGraphics, int color, double... vertices) {
         if (vertices.length < 4 || vertices.length % 2 != 0) return;
 
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        final org.joml.Matrix3x2f poseCopy = new org.joml.Matrix3x2f(guiGraphics.pose());
 
-        for (int k = 0; k < vertices.length; k += 2) {
-            builder.addVertexWith2DPose(guiGraphics.pose(), (float) vertices[k], (float) vertices[k + 1]).setColor(color);
-        }
-        builder.addVertexWith2DPose(guiGraphics.pose(), (float) vertices[0], (float) vertices[1]).setColor(color);
+        guiGraphics.submitGuiElementRenderState(new GuiElementRenderState() {
+            @Override
+            public void buildVertices(VertexConsumer consumer) {
+                int n = vertices.length / 2;
+                float width = 1.0f;
+                for (int i = 0; i < n; i++) {
+                    float x1 = (float) vertices[i * 2];
+                    float y1 = (float) vertices[i * 2 + 1];
+                    float x2 = (float) vertices[((i + 1) % n) * 2];
+                    float y2 = (float) vertices[((i + 1) % n) * 2 + 1];
 
-        RenderTypes.linesTranslucent().draw(builder.buildOrThrow());
+                    addValLine(consumer, poseCopy, x1, y1, x2, y2, width, color);
+                }
+            }
+
+            @Override
+            public RenderPipeline pipeline() {
+                return RenderPipelines.GUI;
+            }
+
+            @Override
+            public TextureSetup textureSetup() {
+                return TextureSetup.noTexture();
+            }
+
+            @Override
+            public ScreenRectangle scissorArea() {
+                return null;
+            }
+
+            @Override
+            public ScreenRectangle bounds() {
+                return new ScreenRectangle(0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight());
+            }
+        });
     }
 
-    // Modern 2D Line Render using addVertexWith2DPose and RenderTypes
+    // Modern 2D Line Render using addVertexWith2DPose and BufferUploader
     private void drawLine(GuiGraphicsExtractor guiGraphics, float x1, float y1, float x2, float y2, int color) {
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+        final org.joml.Matrix3x2f poseCopy = new org.joml.Matrix3x2f(guiGraphics.pose());
 
-        builder.addVertexWith2DPose(guiGraphics.pose(), x1, y1).setColor(color);
-        builder.addVertexWith2DPose(guiGraphics.pose(), x2, y2).setColor(color);
+        guiGraphics.submitGuiElementRenderState(new GuiElementRenderState() {
+            @Override
+            public void buildVertices(VertexConsumer consumer) {
+                addValLine(consumer, poseCopy, x1, y1, x2, y2, 1.0f, color);
+            }
 
-        RenderTypes.linesTranslucent().draw(builder.buildOrThrow());
+            @Override
+            public RenderPipeline pipeline() {
+                return RenderPipelines.GUI;
+            }
+
+            @Override
+            public TextureSetup textureSetup() {
+                return TextureSetup.noTexture();
+            }
+
+            @Override
+            public ScreenRectangle scissorArea() {
+                return null;
+            }
+
+            @Override
+            public ScreenRectangle bounds() {
+                return new ScreenRectangle(0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight());
+            }
+        });
+    }
+
+    private void drawArch(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
+                          double radius, double thick, double startAngle, double endAngle) {
+        if (Math.abs(endAngle - startAngle) < 0.001) {
+            return;
+        }
+        double rad = Math.PI / 180.0;
+        double start = startAngle * rad;
+        double end = endAngle * rad;
+        if (end < start) {
+            double temp = start;
+            start = end;
+            end = temp;
+        }
+
+        double outer = radius + thick;
+        double inner = radius - thick;
+
+        final double finalStart = start;
+        final double finalEnd = end;
+        final org.joml.Matrix3x2f poseCopy = new org.joml.Matrix3x2f(guiGraphics.pose());
+
+        guiGraphics.submitGuiElementRenderState(new GuiElementRenderState() {
+            @Override
+            public void buildVertices(VertexConsumer consumer) {
+                double step = 5.0 * rad;
+                double current = finalStart;
+
+                while (current < finalEnd) {
+                    double next = Math.min(current + step, finalEnd);
+
+                    double sinCurr = Math.sin(current);
+                    double cosCurr = Math.cos(current);
+                    double sinNext = Math.sin(next);
+                    double cosNext = Math.cos(next);
+
+                    float x1_out = (float) (centerX + sinCurr * outer);
+                    float y1_out = (float) (centerY - cosCurr * outer);
+                    float x1_in  = (float) (centerX + sinCurr * inner);
+                    float y1_in  = (float) (centerY - cosCurr * inner);
+
+                    float x2_out = (float) (centerX + sinNext * outer);
+                    float y2_out = (float) (centerY - cosNext * outer);
+                    float x2_in  = (float) (centerX + sinNext * inner);
+                    float y2_in  = (float) (centerY - cosNext * inner);
+
+                    consumer.addVertexWith2DPose(poseCopy, x1_out, y1_out).setColor(color);
+                    consumer.addVertexWith2DPose(poseCopy, x2_out, y2_out).setColor(color);
+                    consumer.addVertexWith2DPose(poseCopy, x2_in, y2_in).setColor(color);
+                    consumer.addVertexWith2DPose(poseCopy, x1_in, y1_in).setColor(color);
+
+                    current = next;
+                }
+            }
+
+            @Override
+            public RenderPipeline pipeline() {
+                return RenderPipelines.GUI;
+            }
+
+            @Override
+            public TextureSetup textureSetup() {
+                return TextureSetup.noTexture();
+            }
+
+            @Override
+            public ScreenRectangle scissorArea() {
+                return null;
+            }
+
+            @Override
+            public ScreenRectangle bounds() {
+                return new ScreenRectangle(0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight());
+            }
+        });
+    }
+
+    private void drawArchLine(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
+                              double radius, double startAngle, double endAngle) {
+        if (Math.abs(endAngle - startAngle) < 0.001) {
+            return;
+        }
+        double rad = Math.PI / 180.0;
+        double start = startAngle * rad;
+        double end = endAngle * rad;
+        if (end < start) {
+            double temp = start;
+            start = end;
+            end = temp;
+        }
+
+        final double finalStart = start;
+        final double finalEnd = end;
+        final org.joml.Matrix3x2f poseCopy = new org.joml.Matrix3x2f(guiGraphics.pose());
+
+        guiGraphics.submitGuiElementRenderState(new GuiElementRenderState() {
+            @Override
+            public void buildVertices(VertexConsumer consumer) {
+                double step = 5.0 * rad;
+                double current = finalStart;
+                float width = 1.0f;
+
+                float lastX = (float) (centerX + Math.sin(current) * radius);
+                float lastY = (float) (centerY - Math.cos(current) * radius);
+
+                while (current < finalEnd) {
+                    double next = Math.min(current + step, finalEnd);
+                    float nextX = (float) (centerX + Math.sin(next) * radius);
+                    float nextY = (float) (centerY - Math.cos(next) * radius);
+
+                    addValLine(consumer, poseCopy, lastX, lastY, nextX, nextY, width, color);
+
+                    lastX = nextX;
+                    lastY = nextY;
+                    current = next;
+                }
+            }
+
+            @Override
+            public RenderPipeline pipeline() {
+                return RenderPipelines.GUI;
+            }
+
+            @Override
+            public TextureSetup textureSetup() {
+                return TextureSetup.noTexture();
+            }
+
+            @Override
+            public ScreenRectangle scissorArea() {
+                return null;
+            }
+
+            @Override
+            public ScreenRectangle bounds() {
+                return new ScreenRectangle(0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight());
+            }
+        });
     }
 
     private void renderACV(GuiGraphicsExtractor guiGraphics, LocalPlayer player, Minecraft mc, int width, int height, double centerX, double centerY,
@@ -1280,91 +1516,4 @@ public class RavenHUDOverlay {
         }
     }
 
-    private void drawArch(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
-                          double radius, double thick, double startAngle, double endAngle) {
-        if (Math.abs(endAngle - startAngle) < 0.001) {
-            return;
-        }
-        double rad = Math.PI / 180.0;
-        double start = startAngle * rad;
-        double end = endAngle * rad;
-        if (end < start) {
-            double temp = start;
-            start = end;
-            end = temp;
-        }
-
-        double outer = radius + thick;
-        double inner = radius - thick;
-
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
-
-        double step = 5.0 * rad;
-        double current = start;
-
-        while (current < end) {
-            double next = Math.min(current + step, end);
-
-            double sinCurr = Math.sin(current);
-            double cosCurr = Math.cos(current);
-            double sinNext = Math.sin(next);
-            double cosNext = Math.cos(next);
-
-            float x1_out = (float) (centerX + sinCurr * outer);
-            float y1_out = (float) (centerY - cosCurr * outer);
-            float x1_in  = (float) (centerX + sinCurr * inner);
-            float y1_in  = (float) (centerY - cosCurr * inner);
-
-            float x2_out = (float) (centerX + sinNext * outer);
-            float y2_out = (float) (centerY - cosNext * outer);
-            float x2_in  = (float) (centerX + sinNext * inner);
-            float y2_in  = (float) (centerY - cosNext * inner);
-
-            builder.addVertexWith2DPose(guiGraphics.pose(), x1_out, y1_out).setColor(color);
-            builder.addVertexWith2DPose(guiGraphics.pose(), x2_out, y2_out).setColor(color);
-            builder.addVertexWith2DPose(guiGraphics.pose(), x1_in, y1_in).setColor(color);
-
-            builder.addVertexWith2DPose(guiGraphics.pose(), x2_out, y2_out).setColor(color);
-            builder.addVertexWith2DPose(guiGraphics.pose(), x2_in, y2_in).setColor(color);
-            builder.addVertexWith2DPose(guiGraphics.pose(), x1_in, y1_in).setColor(color);
-
-            current = next;
-        }
-
-        RenderTypes.debugTriangleFan().draw(builder.buildOrThrow());
-    }
-
-    private void drawArchLine(GuiGraphicsExtractor guiGraphics, int color, double centerX, double centerY,
-                              double radius, double startAngle, double endAngle) {
-        if (Math.abs(endAngle - startAngle) < 0.001) {
-            return;
-        }
-        double rad = Math.PI / 180.0;
-        double start = startAngle * rad;
-        double end = endAngle * rad;
-        if (end < start) {
-            double temp = start;
-            start = end;
-            end = temp;
-        }
-
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
-
-        double step = 5.0 * rad;
-        double current = start;
-
-        while (current < end) {
-            float x = (float) (centerX + Math.sin(current) * radius);
-            float y = (float) (centerY - Math.cos(current) * radius);
-            builder.addVertexWith2DPose(guiGraphics.pose(), x, y).setColor(color);
-            current += step;
-        }
-        float xEnd = (float) (centerX + Math.sin(end) * radius);
-        float yEnd = (float) (centerY - Math.cos(end) * radius);
-        builder.addVertexWith2DPose(guiGraphics.pose(), xEnd, yEnd).setColor(color);
-
-        RenderTypes.linesTranslucent().draw(builder.buildOrThrow());
-    }
 }
