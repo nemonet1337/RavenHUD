@@ -61,6 +61,30 @@ public class Config {
             .comment("Orientation Degree Offset")
             .defineInRange("degOffset", 18, 0, 36);
 
+    public static final ModConfigSpec.BooleanValue AC6_LOCKON_ENABLED = BUILDER
+            .comment("AC6: Enable lock-on targeting system")
+            .define("ac6LockOnEnabled", true);
+
+    public static final ModConfigSpec.DoubleValue AC6_LOCK_RANGE = BUILDER
+            .comment("AC6: Lock-on raytrace range (blocks)")
+            .defineInRange("ac6LockRange", 64.0D, 4.0D, 256.0D);
+
+    public static final ModConfigSpec.IntValue AC6_RADAR_RANGE = BUILDER
+            .comment("AC6: Radar detection range (blocks)")
+            .defineInRange("ac6RadarRange", 48, 8, 256);
+
+    public static final ModConfigSpec.BooleanValue AC6_SHOW_RADAR = BUILDER
+            .comment("AC6: Show top-right radar")
+            .define("ac6ShowRadar", true);
+
+    public static final ModConfigSpec.BooleanValue AC6_SHOW_MISSION = BUILDER
+            .comment("AC6: Show mission/objective text (top-left)")
+            .define("ac6ShowMission", true);
+
+    public static final ModConfigSpec.ConfigValue<String> AC6_MISSION_TEXT = BUILDER
+            .comment("AC6: Fallback mission text when no scoreboard objective")
+            .define("ac6MissionText", "OPERATION: SURVIVE");
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     public enum HudMode {
