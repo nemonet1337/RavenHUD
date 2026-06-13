@@ -15,11 +15,9 @@ import java.util.stream.IntStream;
 
 public final class TypeBHud {
 
-    private TypeBHud() {}
-
-    public static void renderTypeB(GuiGraphicsExtractor guiGraphics, LocalPlayer player, Minecraft mc, int w, int j, double d, double d1,
-                                   RavenHUDOverlay.HudColors colors, float lineR, float lineG, float lineB, float lineAlpha,
-                                   double currentSpeed) {
+    public void render(GuiGraphicsExtractor guiGraphics, LocalPlayer player, Minecraft mc, int w, int j, double d, double d1,
+                       RavenHUDOverlay.HudColors colors, float lineR, float lineG, float lineB, float lineAlpha,
+                       double currentSpeed) {
 
         int frameColor = ((int) (lineAlpha * 255) << 24) | (colors.normal() & 0x00FFFFFF);
 

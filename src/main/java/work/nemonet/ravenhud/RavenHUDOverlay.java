@@ -21,7 +21,7 @@ public class RavenHUDOverlay {
         public boolean isEmpty() { return stack.isEmpty(); }
     }
 
-    private final RavenHud  ravenHud  = new RavenHud();
+    private final RavenModeHud ravenHud  = new RavenModeHud();
     private final TypeBHud  typeBHud  = new TypeBHud();
     private final AcvHud    acvHud    = new AcvHud();
     private final AC6Hud    ac6Hud    = new AC6Hud();

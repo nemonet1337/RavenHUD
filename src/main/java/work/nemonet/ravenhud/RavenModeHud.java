@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
-public final class RavenHud {
+public final class RavenModeHud {
 
     public void render(GuiGraphicsExtractor guiGraphics, LocalPlayer player, Minecraft mc, int w, int j, double d, double d1,
                        RavenHUDOverlay.HudColors colors, float lineR, float lineG, float lineB, float lineAlpha,
